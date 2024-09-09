@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Loop Animation</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        img {
+            width: 500px;
+            height: 500px;
+        }
+    </style>
+</head>
+<body>
+    <img id="svgDisplay" src="pong_000/pong_000.svg" alt="SVG Animation">
+
+    <script>
+        let currentFrame = 0;
+        const totalFrames = 299;
+        const svgDisplay = document.getElementById('svgDisplay');
+
+        function updateFrame() {
+            let frameNumber = currentFrame.toString().padStart(3, '0');
+            svgDisplay.src = `pong_000/pong_${frameNumber}.svg`;
+            currentFrame = (currentFrame + 1) % (totalFrames + 1);  // Loop back to 0
+        }
+
+        // Update the SVG every 100 milliseconds (adjust speed as needed)
+        setInterval(updateFrame, 100);
+    </script>
+</body>
+</html>
