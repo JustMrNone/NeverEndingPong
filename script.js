@@ -147,7 +147,7 @@ function update() {
 
     updateAI();
 
-    // Ensure paddles stay within the canvas
+    // Ensure paddles stay within canvas
     paddleLeft.y = Math.max(0, Math.min(canvas.height - paddleHeight, paddleLeft.y));
     paddleRight.y = Math.max(0, Math.min(canvas.height - paddleHeight, paddleRight.y));
 }
