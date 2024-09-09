@@ -1,0 +1,24 @@
+body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #000;
+    font-family: 'Press Start 2P', cursive;
+}
+
+canvas {
+    border: 2px solid #fff;
+    background-color: #000;
+}
+
+.message {
+    position: absolute;
+    color: #fff;
+    font-size: 2em;
+    text-align: center;
+    width: 100%;
+    top: 20px;
+    display: none;
+}
