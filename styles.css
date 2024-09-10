@@ -1,24 +1,76 @@
-body {
+/* Reset margin/padding to prevent overflow issues */
+* {
     margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
     background-color: #000;
     font-family: 'Press Start 2P', cursive;
+    overflow: hidden;
+    position: relative;
 }
 
+/* Ensure the canvas is centered and responsive */
 canvas {
-    border: 2px solid #fff;
-    background-color: #000;
+    border: 4px solid #fff;
+    background-color: transparent;
+    position: relative;
+    z-index: 1;
+    width: 100%; /* Make canvas width responsive */
+    max-width: 800px; /* Maximum width to keep the aspect ratio */
+    height: auto; /* Maintain aspect ratio */
 }
 
-.message {
+/* Keep the video background covering the full viewport */
+#videoBackground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    object-fit: cover;
+}
+
+/* Media queries to adjust the canvas size on smaller screens */
+@media screen and (max-width: 1200px) {
+    canvas {
+        max-width: 600px;
+    }
+}
+
+@media screen and (max-width: 768px) {
+    canvas {
+        max-width: 500px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    canvas {
+        max-width: 400px;
+    }
+}
+
+@media screen and (max-width: 320px) {
+    canvas {
+        max-width: 300px;
+    }
+}
+
+/*.message {
     position: absolute;
     color: #fff;
     font-size: 2em;
     text-align: center;
     width: 100%;
     top: 20px;
+    z-index: 2;
     display: none;
 }
+*/
