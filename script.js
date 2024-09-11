@@ -16,6 +16,10 @@ let frameCount = 0;
 let leftPaddleTarget = 0;
 let rightPaddleTarget = 0;
 
+window.onload = function() {
+    document.getElementById('content').style.display = 'block'
+};
+
 const paddleLeft = {
     x: 0,
     y: canvas.height / 2 - paddleHeight / 2,
