@@ -4,31 +4,32 @@ const video = document.getElementById('videoBackground');
 const paddleWidth = 10;
 const paddleHeight = 80;
 const ballSize = 10;
-const ballSpeed = 5; 
-const paddleSpeed = 4;
+const ballSpeed = 350; // pixels per second
+const paddleSpeed = 160; // pixels per second
 const humanErrorMargin = 20;
+
+let lastTime = 0;
+let aiDifficulty = 0.5; // 0 to 1, where 1 is perfect play
 
 // Start the game only when the video is ready to play through
 video.addEventListener('canplaythrough', function() {
     document.getElementById('content').style.display = 'block';
     resetBall();
-    gameLoop();  // Start the game loop when the video is fully loaded
+    requestAnimationFrame(gameLoop);
 });
 
 const paddleLeft = {
     x: 0,
     y: canvas.height / 2 - paddleHeight / 2,
     width: paddleWidth,
-    height: paddleHeight,
-    dy: 0
+    height: paddleHeight
 };
 
 const paddleRight = {
     x: canvas.width - paddleWidth,
     y: canvas.height / 2 - paddleHeight / 2,
     width: paddleWidth,
-    height: paddleHeight,
-    dy: 0
+    height: paddleHeight
 };
 
 const ball = {
@@ -63,55 +64,62 @@ function predictBallY(paddleX) {
         }
     }
     
-    return futureY - paddleHeight / 2;
+    return futureY;
 }
 
-function simulateHumanPlayer(paddle, target) {
-    // Calculate distance to target
-    const distanceToTarget = target - (paddle.y + paddle.height / 2);
-    
-    // Adjust speed based on distance, with some randomness
-    let speed = Math.min(Math.abs(distanceToTarget) * 0.2, paddleSpeed) * Math.sign(distanceToTarget);
-    speed += (Math.random() - 0.5) * 0.5; // Add some jitter
-    
-    // Move paddle
+function simulateHumanPlayer(paddle, deltaTime) {
+    const predictedY = predictBallY(paddle.x + (paddle.x === 0 ? paddle.width : -paddle.width));
+    const perfectTarget = predictedY - paddle.height / 2;
+
+    // Introduce AI error margin
+    const maxError = (1 - aiDifficulty) * canvas.height / 2;
+    const error = (Math.random() - 0.5) * 2 * maxError;
+    const target = perfectTarget + error;
+
+    const distanceToTarget = target - paddle.y;
+
+    // Move at a consistent speed, within the limit of paddleSpeed
+    let speed = Math.min(Math.abs(distanceToTarget), paddleSpeed * deltaTime) * Math.sign(distanceToTarget);
+
     paddle.y += speed;
-    
-    // Ensure paddle stays within canvas
-    paddle.y = Math.max(0, Math.min(canvas.height - paddleHeight, paddle.y));
+
+    // Keep the paddle within the screen bounds and use Math.floor() for pixel precision
+    paddle.y = Math.max(0, Math.min(canvas.height - paddle.height, paddle.y));
+
 }
 
-function updatePlayers() {
-    // Left player
-    let leftPaddleTarget = predictBallY(paddleLeft.x);
-    simulateHumanPlayer(paddleLeft, leftPaddleTarget);
-    
-    // Right player
-    let rightPaddleTarget = predictBallY(paddleRight.x);
-    simulateHumanPlayer(paddleRight, rightPaddleTarget);
+function updatePlayers(deltaTime) {
+    simulateHumanPlayer(paddleLeft, deltaTime);
+    simulateHumanPlayer(paddleRight, deltaTime);
 }
 
-function update() {
-    ball.x += ball.dx;
-    ball.y += ball.dy;
+function update(deltaTime) {
+    // Update ball position
+    ball.x += ball.dx * deltaTime;
+    ball.y += ball.dy * deltaTime;
 
-    // Check for wall collisions
-    if (ball.y - ball.size < 0 || ball.y + ball.size > canvas.height) {
-        ball.dy *= -1;
+    // Wall collision detection and response
+    if (ball.y - ball.size < 0) {
+        ball.y = ball.size; // Reposition the ball to touch the wall
+        ball.dy = Math.abs(ball.dy); // Ensure the ball moves downward
+    } else if (ball.y + ball.size > canvas.height) {
+        ball.y = canvas.height - ball.size; // Reposition the ball to touch the wall
+        ball.dy = -Math.abs(ball.dy); // Ensure the ball moves upward
     }
 
-    // Left paddle collision
+    // Paddle collision detection and response
     if (ball.x - ball.size < paddleLeft.x + paddleLeft.width &&
         ball.y > paddleLeft.y && ball.y < paddleLeft.y + paddleLeft.height) {
+        ball.x = paddleLeft.x + paddleLeft.width + ball.size; // Reposition the ball outside the paddle
         const hitPosition = (ball.y - (paddleLeft.y + paddleLeft.height / 2)) / (paddleLeft.height / 2);
-        setballspeed(1, hitPosition);
+        setBallSpeed(1, hitPosition);
     }
 
-    // Right paddle collision
     if (ball.x + ball.size > paddleRight.x &&
         ball.y > paddleRight.y && ball.y < paddleRight.y + paddleRight.height) {
+        ball.x = paddleRight.x - ball.size; // Reposition the ball outside the paddle
         const hitPosition = (ball.y - (paddleRight.y + paddleRight.height / 2)) / (paddleRight.height / 2);
-        setballspeed(-1, hitPosition);
+        setBallSpeed(-1, hitPosition);
     }
 
     // Reset ball if it goes out of bounds
@@ -119,10 +127,10 @@ function update() {
         resetBall();
     }
 
-    updatePlayers();
+    updatePlayers(deltaTime);
 }
 
-function setballspeed(horizontalDirection, verticalInfluence) {
+function setBallSpeed(horizontalDirection, verticalInfluence) {
     const angle = verticalInfluence * Math.PI / 4; // Max angle of 45 degrees
     ball.dx = horizontalDirection * Math.cos(angle) * ballSpeed;
     ball.dy = Math.sin(angle) * ballSpeed;
@@ -135,9 +143,16 @@ function draw() {
     drawBall();
 }
 
-function gameLoop() {
-    update();
+function gameLoop(currentTime) {
+    if (lastTime === 0) {
+        lastTime = currentTime;
+    }
+    const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
+    lastTime = currentTime;
+
+    update(deltaTime);
     draw();
+
     requestAnimationFrame(gameLoop);
 }
 
@@ -149,4 +164,7 @@ function resetBall() {
     ball.dy = Math.sin(angle) * ballSpeed;
 }
 
-gameLoop();
+// Function to set AI difficulty (can be called from outside)
+function setAIDifficulty(difficulty) {
+    aiDifficulty = Math.max(0, Math.min(1, difficulty));
+}
