@@ -1,21 +1,11 @@
 const canvas = document.getElementById('pongCanvas');
 const context = canvas.getContext('2d');
-const message = document.getElementById('message');
-const video = document.getElementById('videoBackground')
+const video = document.getElementById('videoBackground');
 const paddleWidth = 10;
 const paddleHeight = 80;
 const ballSize = 10;
-const paddleSpeed = 4;
-const ballSpeed = 4; 
-const aiReactionDelay = 5;
-const aiErrorMargin = 30;
-
-let scoreLeft = 0;
-let scoreRight = 0;
-let frameCount = 0;
-let leftPaddleTarget = 0;
-let rightPaddleTarget = 0;
-
+const ballSpeed = 5; 
+const humanErrorMargin = 20;
 
 // Start the game only when the video is ready to play through
 video.addEventListener('canplaythrough', function() {
@@ -27,14 +17,16 @@ const paddleLeft = {
     x: 0,
     y: canvas.height / 2 - paddleHeight / 2,
     width: paddleWidth,
-    height: paddleHeight
+    height: paddleHeight,
+    dy: 0
 };
 
 const paddleRight = {
     x: canvas.width - paddleWidth,
     y: canvas.height / 2 - paddleHeight / 2,
     width: paddleWidth,
-    height: paddleHeight
+    height: paddleHeight,
+    dy: 0
 };
 
 const ball = {
@@ -42,7 +34,7 @@ const ball = {
     y: canvas.height / 2,
     size: ballSize,
     dx: ballSpeed,
-    dy: ballSpeed
+    dy: 0
 };
 
 function drawPaddle(paddle) {
@@ -55,22 +47,6 @@ function drawBall() {
     context.beginPath();
     context.arc(ball.x, ball.y, ball.size, 0, Math.PI * 2);
     context.fill();
-}
-
-function drawScores() {
-    context.fillStyle = '#fff';
-    context.font = '30px Press Start 2P';
-    context.textAlign = 'center';
-    //context.fillText(`Player 1: ${scoreLeft}`, canvas.width / 4, 30);
-    //context.fillText(`Player 2: ${scoreRight}`, 3 * canvas.width / 4, 30);
-}
-
-function displayMessage(text) {
-    message.innerText = text;
-    message.style.display = 'block';
-    setTimeout(() => {
-        message.style.display = 'none';
-    }, 2000);
 }
 
 function predictBallY(paddleX) {
@@ -88,109 +64,74 @@ function predictBallY(paddleX) {
     return futureY - paddleHeight / 2;
 }
 
-function updateAI() {
-    frameCount++;
+function simulateHumanPlayer(paddle, target) {
+    const maxSpeed = 4; // Maximum speed of paddle movement
     
-    // Left paddle strategy: Defensive
-    if (ball.dx < 0) {
-        leftPaddleTarget = predictBallY(paddleLeft.x);
-    } else {
-        leftPaddleTarget = canvas.height / 2 - paddleHeight / 2;
-    }
+    // Calculate distance to target
+    const distanceToTarget = target - (paddle.y + paddle.height / 2);
     
-    // Right paddle strategy: Aggressive
-    if (ball.dx > 0 || ball.x > canvas.width / 2) {
-        rightPaddleTarget = predictBallY(paddleRight.x);
-    } else {
-        rightPaddleTarget = ball.y - paddleHeight / 2;
-    }
+    // Adjust speed based on distance, with some randomness
+    let speed = Math.min(Math.abs(distanceToTarget) * 0.2, maxSpeed) * Math.sign(distanceToTarget);
+    speed += (Math.random() - 0.5) * 0.5; // Add some jitter
     
-    // Add some randomness
-    leftPaddleTarget += (Math.random() - 0.5) * aiErrorMargin;
-    rightPaddleTarget += (Math.random() - 0.5) * aiErrorMargin;
+    // Update paddle velocity
+    paddle.dy = speed;
     
-    // Move paddles towards their targets
-    paddleLeft.y += (leftPaddleTarget - paddleLeft.y) * 0.1;
-    paddleRight.y += (rightPaddleTarget - paddleRight.y) * 0.1;
-}
-function normalizeBallSpeed() {
-    const speed = ballSpeed;  // Always use the constant ball speed
-    const angle = Math.atan2(ball.dy, ball.dx);  // Get the angle of motion
+    // Move paddle
+    paddle.y += paddle.dy;
     
-    ball.dx = Math.cos(angle) * speed;  // Reapply ball speed while maintaining angle
-    ball.dy = Math.sin(angle) * speed;
+    // Ensure paddle stays within canvas
+    paddle.y = Math.max(0, Math.min(canvas.height - paddleHeight, paddle.y));
 }
 
+function updatePlayers() {
+    // Left player
+    let leftPaddleTarget = predictBallY(paddleLeft.x);
+    simulateHumanPlayer(paddleLeft, leftPaddleTarget);
+    
+    // Right player
+    let rightPaddleTarget = predictBallY(paddleRight.x);
+    simulateHumanPlayer(paddleRight, rightPaddleTarget);
+}
 
 function update() {
     ball.x += ball.dx;
     ball.y += ball.dy;
 
     // Check for wall collisions
-    if (ball.y + ball.size > canvas.height || ball.y - ball.size < 0) {
-        ball.dy *= -1;  // Reverse Y direction
-        normalizeBallSpeed();  // Ensure constant speed after wall bounce
+    if (ball.y - ball.size < 0 || ball.y + ball.size > canvas.height) {
+        ball.dy *= -1;
     }
 
-    // Left paddle collision with influence on ball direction
+    // Left paddle collision
     if (ball.x - ball.size < paddleLeft.x + paddleLeft.width &&
         ball.y > paddleLeft.y && ball.y < paddleLeft.y + paddleLeft.height) {
-        ball.dx *= -1;
-
-        // Calculate where the ball hit the paddle
+        ball.dx = Math.abs(ball.dx); // Ensure ball moves right
         const hitPosition = (ball.y - (paddleLeft.y + paddleLeft.height / 2)) / (paddleLeft.height / 2);
-        ball.dy = ballSpeed * hitPosition;  // Modify Y direction based on hit position
-
-        normalizeBallSpeed();  // Normalize ball speed after collision
+        ball.dy = hitPosition * ballSpeed; // Adjust vertical speed based on hit position
     }
 
-    // Right paddle collision with influence on ball direction
+    // Right paddle collision
     if (ball.x + ball.size > paddleRight.x &&
         ball.y > paddleRight.y && ball.y < paddleRight.y + paddleRight.height) {
-        ball.dx *= -1;
-
-        // Calculate where the ball hit the paddle
+        ball.dx = -Math.abs(ball.dx); // Ensure ball moves left
         const hitPosition = (ball.y - (paddleRight.y + paddleRight.height / 2)) / (paddleRight.height / 2);
-        ball.dy = ballSpeed * hitPosition;  // Modify Y direction based on hit position
-
-        normalizeBallSpeed();  // Normalize ball speed after collision
+        ball.dy = hitPosition * ballSpeed; // Adjust vertical speed based on hit position
     }
 
-    // Check for scoring conditions
-    if (ball.x + ball.size < 0) {
-        scoreRight++;
-        if (scoreRight === 5) {
-            displayMessage('Player 2 Wins!');
-            resetGame();
-        } else {
-            resetBall();
-        }
+    // Reset ball if it goes out of bounds
+    if (ball.x + ball.size < 0 || ball.x - ball.size > canvas.width) {
+        resetBall();
     }
 
-    if (ball.x - ball.size > canvas.width) {
-        scoreLeft++;
-        if (scoreLeft === 5) {
-            displayMessage('Player 1 Wins!');
-            resetGame();
-        } else {
-            resetBall();
-        }
-    }
-
-    updateAI();
-
-    // Ensure paddles stay within canvas
-    paddleLeft.y = Math.max(0, Math.min(canvas.height - paddleHeight, paddleLeft.y));
-    paddleRight.y = Math.max(0, Math.min(canvas.height - paddleHeight, paddleRight.y));
+    updatePlayers();
 }
-
 
 function draw() {
     context.clearRect(0, 0, canvas.width, canvas.height);
     drawPaddle(paddleLeft);
     drawPaddle(paddleRight);
     drawBall();
-    drawScores();
 }
 
 function gameLoop() {
@@ -202,14 +143,9 @@ function gameLoop() {
 function resetBall() {
     ball.x = canvas.width / 2;
     ball.y = canvas.height / 2;
-    ball.dx = ballSpeed * (Math.random() > 0.5 ? 1 : -1);
-    ball.dy = ballSpeed * (Math.random() > 0.5 ? 1 : -1);
-}
-
-function resetGame() {
-    scoreLeft = 0;
-    scoreRight = 0;
-    resetBall();
+    const angle = (Math.random() - 0.5) * Math.PI / 2; // Random angle between -45 and 45 degrees
+    ball.dx = Math.cos(angle) * ballSpeed * (Math.random() > 0.5 ? 1 : -1);
+    ball.dy = Math.sin(angle) * ballSpeed;
 }
 
 gameLoop();
