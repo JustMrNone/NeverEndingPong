@@ -6,7 +6,7 @@ const paddleWidth = 10;
 const paddleHeight = 80;
 const ballSize = 10;
 const paddleSpeed = 4;
-const ballSpeed = 4;
+const ballSpeed = 4; 
 const aiReactionDelay = 5;
 const aiErrorMargin = 30;
 
@@ -113,25 +113,50 @@ function updateAI() {
     paddleLeft.y += (leftPaddleTarget - paddleLeft.y) * 0.1;
     paddleRight.y += (rightPaddleTarget - paddleRight.y) * 0.1;
 }
+function normalizeBallSpeed() {
+    const speed = ballSpeed;  // Always use the constant ball speed
+    const angle = Math.atan2(ball.dy, ball.dx);  // Get the angle of motion
+    
+    ball.dx = Math.cos(angle) * speed;  // Reapply ball speed while maintaining angle
+    ball.dy = Math.sin(angle) * speed;
+}
+
 
 function update() {
     ball.x += ball.dx;
     ball.y += ball.dy;
 
+    // Check for wall collisions
     if (ball.y + ball.size > canvas.height || ball.y - ball.size < 0) {
-        ball.dy *= -1;
+        ball.dy *= -1;  // Reverse Y direction
+        normalizeBallSpeed();  // Ensure constant speed after wall bounce
     }
 
+    // Left paddle collision with influence on ball direction
     if (ball.x - ball.size < paddleLeft.x + paddleLeft.width &&
         ball.y > paddleLeft.y && ball.y < paddleLeft.y + paddleLeft.height) {
         ball.dx *= -1;
+
+        // Calculate where the ball hit the paddle
+        const hitPosition = (ball.y - (paddleLeft.y + paddleLeft.height / 2)) / (paddleLeft.height / 2);
+        ball.dy = ballSpeed * hitPosition;  // Modify Y direction based on hit position
+
+        normalizeBallSpeed();  // Normalize ball speed after collision
     }
 
+    // Right paddle collision with influence on ball direction
     if (ball.x + ball.size > paddleRight.x &&
         ball.y > paddleRight.y && ball.y < paddleRight.y + paddleRight.height) {
         ball.dx *= -1;
+
+        // Calculate where the ball hit the paddle
+        const hitPosition = (ball.y - (paddleRight.y + paddleRight.height / 2)) / (paddleRight.height / 2);
+        ball.dy = ballSpeed * hitPosition;  // Modify Y direction based on hit position
+
+        normalizeBallSpeed();  // Normalize ball speed after collision
     }
 
+    // Check for scoring conditions
     if (ball.x + ball.size < 0) {
         scoreRight++;
         if (scoreRight === 5) {
@@ -158,6 +183,7 @@ function update() {
     paddleLeft.y = Math.max(0, Math.min(canvas.height - paddleHeight, paddleLeft.y));
     paddleRight.y = Math.max(0, Math.min(canvas.height - paddleHeight, paddleRight.y));
 }
+
 
 function draw() {
     context.clearRect(0, 0, canvas.width, canvas.height);
