@@ -5,11 +5,13 @@ const paddleWidth = 10;
 const paddleHeight = 80;
 const ballSize = 10;
 const ballSpeed = 5; 
+const paddleSpeed = 4;
 const humanErrorMargin = 20;
 
 // Start the game only when the video is ready to play through
 video.addEventListener('canplaythrough', function() {
     document.getElementById('content').style.display = 'block';
+    resetBall();
     gameLoop();  // Start the game loop when the video is fully loaded
 });
 
@@ -65,20 +67,15 @@ function predictBallY(paddleX) {
 }
 
 function simulateHumanPlayer(paddle, target) {
-    const maxSpeed = 4; // Maximum speed of paddle movement
-    
     // Calculate distance to target
     const distanceToTarget = target - (paddle.y + paddle.height / 2);
     
     // Adjust speed based on distance, with some randomness
-    let speed = Math.min(Math.abs(distanceToTarget) * 0.2, maxSpeed) * Math.sign(distanceToTarget);
+    let speed = Math.min(Math.abs(distanceToTarget) * 0.2, paddleSpeed) * Math.sign(distanceToTarget);
     speed += (Math.random() - 0.5) * 0.5; // Add some jitter
     
-    // Update paddle velocity
-    paddle.dy = speed;
-    
     // Move paddle
-    paddle.y += paddle.dy;
+    paddle.y += speed;
     
     // Ensure paddle stays within canvas
     paddle.y = Math.max(0, Math.min(canvas.height - paddleHeight, paddle.y));
@@ -106,17 +103,15 @@ function update() {
     // Left paddle collision
     if (ball.x - ball.size < paddleLeft.x + paddleLeft.width &&
         ball.y > paddleLeft.y && ball.y < paddleLeft.y + paddleLeft.height) {
-        ball.dx = Math.abs(ball.dx); // Ensure ball moves right
         const hitPosition = (ball.y - (paddleLeft.y + paddleLeft.height / 2)) / (paddleLeft.height / 2);
-        ball.dy = hitPosition * ballSpeed; // Adjust vertical speed based on hit position
+        setballspeed(1, hitPosition);
     }
 
     // Right paddle collision
     if (ball.x + ball.size > paddleRight.x &&
         ball.y > paddleRight.y && ball.y < paddleRight.y + paddleRight.height) {
-        ball.dx = -Math.abs(ball.dx); // Ensure ball moves left
         const hitPosition = (ball.y - (paddleRight.y + paddleRight.height / 2)) / (paddleRight.height / 2);
-        ball.dy = hitPosition * ballSpeed; // Adjust vertical speed based on hit position
+        setballspeed(-1, hitPosition);
     }
 
     // Reset ball if it goes out of bounds
@@ -125,6 +120,12 @@ function update() {
     }
 
     updatePlayers();
+}
+
+function setballspeed(horizontalDirection, verticalInfluence) {
+    const angle = verticalInfluence * Math.PI / 4; // Max angle of 45 degrees
+    ball.dx = horizontalDirection * Math.cos(angle) * ballSpeed;
+    ball.dy = Math.sin(angle) * ballSpeed;
 }
 
 function draw() {
