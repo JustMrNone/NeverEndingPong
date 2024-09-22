@@ -1,7 +1,7 @@
 const canvas = document.getElementById('pongCanvas');
 const context = canvas.getContext('2d');
 const message = document.getElementById('message');
-
+const video = document.getElementById('videoBackground')
 const paddleWidth = 10;
 const paddleHeight = 80;
 const ballSize = 10;
@@ -17,10 +17,12 @@ let leftPaddleTarget = 0;
 let rightPaddleTarget = 0;
 
 
-window.onload = function() {
-    document.getElementById('content').style.display = 'block'
-};
-//1
+// Start the game only when the video is ready to play through
+video.addEventListener('canplaythrough', function() {
+    document.getElementById('content').style.display = 'block';
+    gameLoop();  // Start the game loop when the video is fully loaded
+});
+
 const paddleLeft = {
     x: 0,
     y: canvas.height / 2 - paddleHeight / 2,
